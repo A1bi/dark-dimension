@@ -3,15 +3,23 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+	[Header("Speed")]
 	public int _normalSpeed = 1000;
 	public float _boostFactor = 4;
 	public float _boostTransitionDuration = 1.0f;
+	[Header("Rotation")]
 	public float _rotationSpeed = 150;
 	public int _maxRoll = 70;
 	public int _maxPitch = 50;
 	public int _maxYaw = 30;
 	public float _yawRatio = 0.3f;
 	public bool _yInverted = true;
+	[Header("Fire")]
+	public GameObject _shot;
+	public Transform _shotSpawner;
+	public float _shotsPerSecond;
+	[Header("Misc")]
+	public GameObject _explosion;
 
 	private Rigidbody _rigidbody;
 	private float _currentSpeed;
@@ -19,29 +27,44 @@ public class PlayerController : MonoBehaviour
 	private float _targetSpeed;
 	private float _speedEasingStep = 1f;
 	private Func<float, float> _speedEasing;
+	private float _nextShot;
 
-	void Start() {
-		_rigidbody = GetComponent<Rigidbody>();
+	void Start () {
+		_rigidbody = GetComponent<Rigidbody> ();
 	}
 
-	void FixedUpdate()
-	{
+	void Update () {
+		if (Input.GetButton ("Fire1") && Time.time > _nextShot) {
+			_nextShot = Time.time + 1 / _shotsPerSecond;
+			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
+		}
+	}
+
+	void FixedUpdate () {
 		updateSpeed();
 		updateRotation();
 	}
 
+	void OnTriggerEnter (Collider other) {
+		if (other.tag == "Asteroid") {
+			Destroy(other);
+			Instantiate(_explosion, transform.position, transform.rotation);
+			gameObject.SetActive(false);
+		}
+	}
+
 	void updateSpeed() {
-		if (Input.GetKeyDown(KeyCode.LeftShift)) {
+		if (Input.GetButtonDown("Boost")) {
 			float boostSpeed = _normalSpeed * _boostFactor;
 			changeSpeed(boostSpeed);
 			_speedEasing = easeIn;
 			
-		} else if (Input.GetKeyUp(KeyCode.LeftShift) || _previousSpeed < 0) {
+		} else if (Input.GetButtonUp("Boost") || _previousSpeed < 0) {
 			changeSpeed(_normalSpeed);
 			_speedEasing = easeOut;
 		}
 		
-		if (Input.GetKeyUp(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.LeftShift)) {
+		if (Input.GetButtonDown("Boost") || Input.GetButtonUp("Boost")) {
 			_speedEasingStep = 0f;
 		}
 		

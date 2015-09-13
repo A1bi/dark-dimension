@@ -2,6 +2,8 @@
 using System.Collections;
 
 public class DestroyOutOfView : MonoBehaviour {
+	public float _maxDistance = 6000;
+
 	private GameObject _camera;
 
 	void Start () {
@@ -9,7 +11,8 @@ public class DestroyOutOfView : MonoBehaviour {
 	}
 
 	void LateUpdate () {
-		if (transform.position.z < _camera.transform.position.z) {
+		float cameraZ = _camera.transform.position.z;
+		if (transform.position.z < cameraZ || transform.position.z > (cameraZ + _maxDistance)) {
 			Destroy(gameObject);
 		}
 	}
