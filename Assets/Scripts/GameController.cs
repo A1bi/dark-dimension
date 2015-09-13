@@ -17,9 +17,22 @@ public class GameController : MonoBehaviour {
 	public float _spawnDistance;
 	public float _horizontalSpawnRange;
 	public float _verticalSpawnRange;
+	[Header("Cameras")]
+	public GameObject[] _cameras;
 
 	private float _lastAsteroidZ;
 	private float _lastPlanetZ;
+	private int _currentCameraIndex = -1;
+
+	void Start () {
+		switchCamera ();
+	}
+
+	void Update () {
+		if (Input.GetButtonUp ("Camera")) {
+			switchCamera ();
+		}
+	}
 
 	void LateUpdate () {
 		SpawnAsteroid ();
@@ -75,5 +88,18 @@ public class GameController : MonoBehaviour {
 	bool ShouldSpawnNewObject(float lastZ, float distance, float deviation) {
 		float difference = _player.transform.position.z - lastZ;
 		return difference >= Random.Range(distance - deviation, distance + deviation);
+	}
+
+	void switchCamera () {
+		_currentCameraIndex = ++_currentCameraIndex % _cameras.Length;
+		for (int i = 0; i < _cameras.Length; i++) {
+			_cameras[i].SetActive(i == _currentCameraIndex);
+		}
+	}
+
+	public void PlayerHitAsteroid () {
+		if (_currentCameraIndex > 0) {
+			switchCamera ();
+		}
 	}
 }

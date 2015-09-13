@@ -4,6 +4,7 @@ using System.Collections;
 public class CameraController : MonoBehaviour {
 	public GameObject _player;
 	public float _damping = 15.0f;
+	public bool _firstPerson = false;
 	
 	private Vector3 _distance;
 		
@@ -14,10 +15,14 @@ public class CameraController : MonoBehaviour {
 //	fixed rotation camera
 	void LateUpdate () {
 		Vector3 targetPosition = _player.transform.position + _distance;
-		Vector3 newPosition = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * _damping);
-		transform.position = newPosition;
-		
-		transform.LookAt(_player.transform.position);
+
+		if (_firstPerson) {
+			transform.position = targetPosition;
+			transform.rotation = _player.transform.rotation;
+		} else {
+			transform.position = Vector3.Lerp (transform.position, targetPosition, Time.deltaTime * _damping);
+			transform.LookAt(_player.transform.position);
+		}
 	}
 
 //	following angle camera

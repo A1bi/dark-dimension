@@ -22,6 +22,7 @@ public class PlayerController : MonoBehaviour
 	public GameObject _explosion;
 
 	private Rigidbody _rigidbody;
+	private GameController _gameController;
 	private float _currentSpeed;
 	private float _previousSpeed = -1;
 	private float _targetSpeed;
@@ -31,6 +32,7 @@ public class PlayerController : MonoBehaviour
 
 	void Start () {
 		_rigidbody = GetComponent<Rigidbody> ();
+		_gameController = GameObject.FindGameObjectWithTag ("GameController").GetComponent<GameController> ();
 	}
 
 	void Update () {
@@ -50,6 +52,7 @@ public class PlayerController : MonoBehaviour
 			Destroy(other);
 			Instantiate(_explosion, transform.position, transform.rotation);
 			gameObject.SetActive(false);
+			_gameController.PlayerHitAsteroid();
 		}
 	}
 
