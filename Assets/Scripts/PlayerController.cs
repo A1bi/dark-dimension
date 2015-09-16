@@ -18,8 +18,9 @@ public class PlayerController : MonoBehaviour
 	public GameObject _shot;
 	public Transform _shotSpawner;
 	public float _shotsPerSecond;
-	[Header("Misc")]
+	[Header("General")]
 	public GameObject _explosion;
+	public GameObject _turbine;
 
 	private Rigidbody _rigidbody;
 	private GameController _gameController;
@@ -36,6 +37,10 @@ public class PlayerController : MonoBehaviour
 	}
 
 	void Update () {
+		if (!_gameController._inGame) {
+			return;
+		}
+
 		if (Input.GetButton ("Fire1") && Time.time > _nextShot) {
 			_nextShot = Time.time + 1 / _shotsPerSecond;
 			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
@@ -43,8 +48,13 @@ public class PlayerController : MonoBehaviour
 	}
 
 	void FixedUpdate () {
-		updateSpeed();
-		updateRotation();
+		if (!_gameController._inGame) {
+			return;
+		}
+
+		UpdateSpeed ();
+		UpdateRotation ();
+		UpdateTurbine ();
 	}
 
 	void OnTriggerEnter (Collider other) {
@@ -56,10 +66,13 @@ public class PlayerController : MonoBehaviour
 
 		} else if (other.tag == "Checkpoint") {
 			_gameController.PlayerHitCheckpoint ();
+		
+		} else if (other.tag == "Finish") {
+			_gameController.PlayerHitFinish ();
 		}
 	}
 
-	void updateSpeed() {
+	void UpdateSpeed() {
 		if (Input.GetButtonDown("Boost")) {
 			float boostSpeed = _normalSpeed * _boostFactor;
 			changeSpeed(boostSpeed);
@@ -100,7 +113,7 @@ public class PlayerController : MonoBehaviour
 		return t * (2 - t);
 	}
 
-	void updateRotation() {
+	void UpdateRotation() {
 		float roll = Input.GetAxis("Horizontal") * Time.deltaTime * _rotationSpeed;
 		float pitch = Input.GetAxis("Vertical") * Time.deltaTime * _rotationSpeed;
 		if (!_yInverted) {
@@ -117,6 +130,13 @@ public class PlayerController : MonoBehaviour
 			angles.y = 360 - angles.y;
 		}
 		_rigidbody.rotation = Quaternion.Lerp(Quaternion.Euler(angles), Quaternion.identity, (_currentSpeed - _normalSpeed) / (_normalSpeed * (_boostFactor - 1)));
+	}
+
+	void UpdateTurbine () {
+		ParticleEmitter emitter = _turbine.GetComponent<ParticleEmitter> ();
+		float factor = _currentSpeed / _normalSpeed;
+		emitter.minEmission = 50 * factor;
+		emitter.maxEmission = 150 * factor;
 	}
 
 	float getConstrainedAngle(float angle, float constraint) {

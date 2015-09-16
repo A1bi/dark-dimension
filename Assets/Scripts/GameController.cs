@@ -25,18 +25,23 @@ public class GameController : MonoBehaviour {
 	public float _verticalSpawnRange;
 	[Header("General")]
 	public GameObject[] _cameras;
-	public float _goalDistance;
+	public GameObject _finish;
+	public float _finishDistance;
+
+	public bool _inGame = false;
 
 	private float _lastAsteroidZ;
 	private float _lastPlanetZ;
 	private float _lastCheckpointZ;
 	private int _currentCameraIndex = -1;
 	private float _checkpointDistance;
+	private bool _finishSpawned = false;
 
 	void Start () {
-		_checkpointDistance = _goalDistance / _numberOfCheckpoints;
+		_checkpointDistance = _finishDistance / _numberOfCheckpoints;
 
 		SwitchCamera ();
+		StartGame ();
 	}
 
 	void Update () {
@@ -49,6 +54,11 @@ public class GameController : MonoBehaviour {
 		SpawnAsteroid ();
 		SpawnPlanet ();
 		SpawnCheckpoint ();
+		SpawnFinish ();
+	}
+
+	void StartGame () {
+		_inGame = true;
 	}
 
 	void SpawnAsteroid () {
@@ -106,6 +116,16 @@ public class GameController : MonoBehaviour {
 		_lastCheckpointZ = checkpointCenter.z;
 	}
 
+	void SpawnFinish () {
+		if (_finishSpawned || !ShouldSpawnNewObject (0, _finishDistance, 0)) {
+			return;
+		}
+
+		GameObject finish = (GameObject)Instantiate (_finish);
+		finish.transform.position = new Vector3 (0, 0, _player.transform.position.z + _spawnDistance);
+		_finishSpawned = true;
+	}
+
 	GameObject GetRandomObjectFromArray (GameObject[] array) {
 		return array[Random.Range(0, array.Length)];
 	}
@@ -119,7 +139,7 @@ public class GameController : MonoBehaviour {
 	}
 
 	bool ShouldSpawnNewObject(float lastZ, float distance, float deviation) {
-		float difference = _player.transform.position.z - lastZ;
+		float difference = _player.transform.position.z + _spawnDistance - lastZ;
 		return difference >= Random.Range(distance - deviation, distance + deviation);
 	}
 
@@ -138,5 +158,9 @@ public class GameController : MonoBehaviour {
 
 	public void PlayerHitCheckpoint () {
 		print ("Checkpoint");
+	}
+
+	public void PlayerHitFinish () {
+		_inGame = false;
 	}
 }

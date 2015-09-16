@@ -64,7 +64,7 @@ public class CheckpointConroller : MonoBehaviour {
 		GetComponent<MeshCollider> ().sharedMesh = mesh;
 
 		Vector3 position = transform.position;
-		position.z -= 1000 * Time.deltaTime;
+		position.z -= 500 * Time.deltaTime;
 		transform.position = position;
 	}
 }

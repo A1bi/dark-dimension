@@ -7,20 +7,28 @@ public class CameraController : MonoBehaviour {
 	public bool _firstPerson = false;
 	
 	private Vector3 _distance;
+	private GameController _gameController; 
 		
 	void Start () {
 		_distance = transform.position - _player.transform.position;
+		_gameController = GameObject.FindGameObjectWithTag ("GameController").GetComponent<GameController> ();
 	}
 	
 //	fixed rotation camera
 	void LateUpdate () {
+		if (!_gameController._inGame) {
+			return;
+		}
+
 		Vector3 targetPosition = _player.transform.position + _distance;
 
 		if (_firstPerson) {
 			transform.position = targetPosition;
 			transform.rotation = _player.transform.rotation;
 		} else {
-			transform.position = Vector3.Lerp (transform.position, targetPosition, Time.deltaTime * _damping);
+			Vector3 position = Vector3.Lerp (transform.position, targetPosition, Time.deltaTime * _damping);
+			position.z = targetPosition.z;
+			transform.position = position;
 			transform.LookAt(_player.transform.position);
 		}
 	}
