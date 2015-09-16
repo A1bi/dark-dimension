@@ -49,10 +49,13 @@ public class PlayerController : MonoBehaviour
 
 	void OnTriggerEnter (Collider other) {
 		if (other.tag == "Asteroid") {
-			Destroy(other);
-			Instantiate(_explosion, transform.position, transform.rotation);
-			gameObject.SetActive(false);
-			_gameController.PlayerHitAsteroid();
+			Destroy (other);
+			Instantiate (_explosion, transform.position, transform.rotation);
+			gameObject.SetActive (false);
+			_gameController.PlayerHitAsteroid ();
+
+		} else if (other.tag == "Checkpoint") {
+			_gameController.PlayerHitCheckpoint ();
 		}
 	}
 

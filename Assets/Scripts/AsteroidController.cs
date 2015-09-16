@@ -15,7 +15,9 @@ public class AsteroidController : MonoBehaviour {
 	void OnTriggerEnter (Collider other) {
 		if (other.tag == "Shot") {
 			Instantiate(_explosion, transform.position, transform.rotation);
+			_explosion.transform.localScale = transform.localScale;
 			Destroy(gameObject);
+			Destroy(other);
 		}
 	}
 }
