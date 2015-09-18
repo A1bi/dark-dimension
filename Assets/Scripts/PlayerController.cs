@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -7,6 +8,9 @@ public class PlayerController : MonoBehaviour
 	public int _normalSpeed = 1000;
 	public float _boostFactor = 4;
 	public float _boostTransitionDuration = 1.0f;
+	public float _initialBoostAmount = 50.0f;
+	public float _checkpointBoostIncrease = 30.0f;
+	public float _boostDecrease = 0.3f;
 	[Header("Rotation")]
 	public float _rotationSpeed = 150;
 	public int _maxRoll = 70;
@@ -18,12 +22,20 @@ public class PlayerController : MonoBehaviour
 	public GameObject _shot;
 	public Transform _shotSpawner;
 	public float _shotsPerSecond;
+	public AudioClip[] _shotSounds;
 	[Header("General")]
 	public GameObject _explosion;
 	public GameObject _turbine;
+	public int _asteroidDamage = 25;
+	public int _planetDamage = 100;
+	[Header("UI")]
+	public Slider _boostSlider;
+	public Slider _healthSlider;
 
 	private Rigidbody _rigidbody;
 	private GameController _gameController;
+	private float _boost;
+	private float _health;
 	private float _currentSpeed;
 	private float _previousSpeed = -1;
 	private float _targetSpeed;
@@ -37,20 +49,21 @@ public class PlayerController : MonoBehaviour
 	}
 
 	void Update () {
-		if (!_gameController._inGame) {
+		if (!_gameController._inGame)
 			return;
-		}
 
 		if (Input.GetButton ("Fire1") && Time.time > _nextShot) {
 			_nextShot = Time.time + 1 / _shotsPerSecond;
 			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
 		}
+
+		UpdateSlider (_boostSlider, _boost);
+		UpdateSlider (_healthSlider, _health);
 	}
 
 	void FixedUpdate () {
-		if (!_gameController._inGame) {
+		if (!_gameController._inGame)
 			return;
-		}
 
 		UpdateSpeed ();
 		UpdateRotation ();
@@ -59,31 +72,40 @@ public class PlayerController : MonoBehaviour
 
 	void OnTriggerEnter (Collider other) {
 		if (other.tag == "Asteroid") {
-			Destroy (other);
-			Instantiate (_explosion, transform.position, transform.rotation);
-			gameObject.SetActive (false);
-			_gameController.PlayerHitAsteroid ();
+			TakeDamage(_asteroidDamage);
 
 		} else if (other.tag == "Checkpoint") {
-			_gameController.PlayerHitCheckpoint ();
+			ChangeBoost(_checkpointBoostIncrease);
 		
 		} else if (other.tag == "Finish") {
 			_gameController.PlayerHitFinish ();
 		}
 	}
 
+	public void Reset() {
+		gameObject.SetActive(true);
+		_boost = _initialBoostAmount;
+		_health = 100;
+	}
+
 	void UpdateSpeed() {
-		if (Input.GetButtonDown("Boost")) {
+		if (_targetSpeed > _normalSpeed) {
+			ChangeBoost (-_boostDecrease);
+		}
+
+		if (Input.GetButtonDown("Boost") && _boost > 0) {
 			float boostSpeed = _normalSpeed * _boostFactor;
 			changeSpeed(boostSpeed);
 			_speedEasing = easeIn;
-			
-		} else if (Input.GetButtonUp("Boost") || _previousSpeed < 0) {
+		}
+
+		bool endBoost = Input.GetButtonUp ("Boost") || _boost <= 0;
+		if (endBoost || _previousSpeed < 0) {
 			changeSpeed(_normalSpeed);
 			_speedEasing = easeOut;
 		}
 		
-		if (Input.GetButtonDown("Boost") || Input.GetButtonUp("Boost")) {
+		if (endBoost || Input.GetButtonUp("Boost")) {
 			_speedEasingStep = 0f;
 		}
 		
@@ -137,6 +159,24 @@ public class PlayerController : MonoBehaviour
 		float factor = _currentSpeed / _normalSpeed;
 		emitter.minEmission = 50 * factor;
 		emitter.maxEmission = 150 * factor;
+	}
+
+	void TakeDamage(float amount) {
+		_health -= amount;
+
+		if (_gameController._inGame && _health <= 0) {
+			Instantiate (_explosion, transform.position, transform.rotation);
+			gameObject.SetActive(false);
+			_gameController.PlayerDied();
+		}
+	}
+
+	void ChangeBoost(float amount) {
+		_boost += amount;
+	}
+
+	void UpdateSlider(Slider slider, float value) {
+		slider.value = Mathf.Lerp (slider.value, value, Time.deltaTime * 3.0f);
 	}
 
 	float getConstrainedAngle(float angle, float constraint) {

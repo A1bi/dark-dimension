@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 
 public class GameController : MonoBehaviour {
@@ -27,7 +28,9 @@ public class GameController : MonoBehaviour {
 	public GameObject[] _cameras;
 	public GameObject _finish;
 	public float _finishDistance;
-
+	[Header("UI")]
+	public Text _timeText;
+	[HideInInspector]
 	public bool _inGame = false;
 
 	private float _lastAsteroidZ;
@@ -36,6 +39,7 @@ public class GameController : MonoBehaviour {
 	private int _currentCameraIndex = -1;
 	private float _checkpointDistance;
 	private bool _finishSpawned = false;
+	private float _time;
 
 	void Start () {
 		_checkpointDistance = _finishDistance / _numberOfCheckpoints;
@@ -48,6 +52,12 @@ public class GameController : MonoBehaviour {
 		if (Input.GetButtonUp ("Camera")) {
 			SwitchCamera ();
 		}
+
+		if (_inGame) {
+			_time += Time.deltaTime;
+			System.TimeSpan time = System.TimeSpan.FromSeconds(_time);
+			_timeText.text = System.String.Format("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
+		}
 	}
 
 	void LateUpdate () {
@@ -59,6 +69,16 @@ public class GameController : MonoBehaviour {
 
 	void StartGame () {
 		_inGame = true;
+		_time = 0;
+		_player.GetComponent<PlayerController> ().Reset ();
+	}
+
+	void StopGame () {
+		_inGame = false;
+
+		if (_currentCameraIndex > 0) {
+			SwitchCamera ();
+		}
 	}
 
 	void SpawnAsteroid () {
@@ -150,17 +170,11 @@ public class GameController : MonoBehaviour {
 		}
 	}
 
-	public void PlayerHitAsteroid () {
-		if (_currentCameraIndex > 0) {
-			SwitchCamera ();
-		}
-	}
-
-	public void PlayerHitCheckpoint () {
-		print ("Checkpoint");
+	public void PlayerDied () {
+		StopGame ();
 	}
 
 	public void PlayerHitFinish () {
-		_inGame = false;
+		StopGame ();
 	}
 }

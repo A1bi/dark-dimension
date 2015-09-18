@@ -15,7 +15,7 @@ public class SpeedParticlesController : MonoBehaviour {
 		_emitter.emit = speed > 10;
 
 		Vector3 velo = _emitter.localVelocity;
-		velo.z = -speed;
+		velo.z = -speed / 8.0f;
 		_emitter.localVelocity = velo;
 	}
 }
