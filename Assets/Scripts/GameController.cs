@@ -30,6 +30,10 @@ public class GameController : MonoBehaviour {
 	public float _finishDistance;
 	[Header("UI")]
 	public Text _timeText;
+	public GameObject _mainMenu;
+	public GameObject _helpMenu;
+	public GameObject _inGameMenu;
+	public GameObject _pauseMenu;
 	[HideInInspector]
 	public bool _inGame = false;
 
@@ -44,16 +48,24 @@ public class GameController : MonoBehaviour {
 	void Start () {
 		_checkpointDistance = _finishDistance / _numberOfCheckpoints;
 
+		GameObject[] menus = { _mainMenu, _helpMenu, _inGameMenu, _pauseMenu };
+		foreach (GameObject menu in menus) {
+			menu.SetActive (true);
+		}
+
 		SwitchCamera ();
-		StartGame ();
+		ShowMenu (_mainMenu, true);
 	}
 
 	void Update () {
-		if (Input.GetButtonUp ("Camera")) {
-			SwitchCamera ();
-		}
-
 		if (_inGame) {
+			if (Input.GetButtonUp ("Camera")) {
+				SwitchCamera ();
+			
+			} else if (Input.GetButtonUp ("Cancel")) {
+				TogglePauseMenu ();
+			}
+
 			_time += Time.deltaTime;
 			System.TimeSpan time = System.TimeSpan.FromSeconds(_time);
 			_timeText.text = System.String.Format("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
@@ -67,10 +79,26 @@ public class GameController : MonoBehaviour {
 		SpawnFinish ();
 	}
 
-	void StartGame () {
+	public void StartGame () {
 		_inGame = true;
 		_time = 0;
 		_player.GetComponent<PlayerController> ().Reset ();
+
+		ShowMenu (_mainMenu, false);
+		ShowMenu (_inGameMenu, true);
+	}
+
+	public void RestartGame () {
+		string[] tags = { "Planet", "Asteroid", "Checkpoint" };
+		foreach (string tag in tags) {
+			GameObject[] objects = GameObject.FindGameObjectsWithTag (tag);
+			foreach (GameObject obj in objects) {
+				Destroy(obj);
+			}
+		}
+
+		StartGame ();
+		TogglePauseMenu (false);
 	}
 
 	void StopGame () {
@@ -150,7 +178,7 @@ public class GameController : MonoBehaviour {
 		return array[Random.Range(0, array.Length)];
 	}
 
-	Vector3 GetPositionWithinSpawnRange() {
+	Vector3 GetPositionWithinSpawnRange () {
 		Vector3 playerPos = _player.transform.position;
 		float posX = Random.Range(playerPos.x - _horizontalSpawnRange, playerPos.x + _horizontalSpawnRange);
 		float posY = Random.Range(playerPos.y - _verticalSpawnRange, playerPos.y + _verticalSpawnRange);
@@ -158,7 +186,7 @@ public class GameController : MonoBehaviour {
 		return new Vector3(posX, posY, posZ);
 	}
 
-	bool ShouldSpawnNewObject(float lastZ, float distance, float deviation) {
+	bool ShouldSpawnNewObject (float lastZ, float distance, float deviation) {
 		float difference = _player.transform.position.z + _spawnDistance - lastZ;
 		return difference >= Random.Range(distance - deviation, distance + deviation);
 	}
@@ -170,11 +198,37 @@ public class GameController : MonoBehaviour {
 		}
 	}
 
+	void ShowMenu (GameObject menu, bool toggle) {
+		menu.GetComponent<Animator> ().SetBool("visible", toggle);
+	}
+
 	public void PlayerDied () {
 		StopGame ();
 	}
 
 	public void PlayerHitFinish () {
 		StopGame ();
+	}
+
+	public void VolumeSettingChanged (float volume) {
+		AudioListener.volume = volume;
+	}
+
+	public void TogglePauseMenu () {
+		bool visible = _pauseMenu.GetComponent<Animator> ().GetBool ("visible");
+		TogglePauseMenu (!visible);
+	}
+
+	public void TogglePauseMenu (bool toggle) {
+		Time.timeScale = toggle ? 0 : 1;
+		ShowMenu (_pauseMenu, toggle);
+	}
+
+	public void ToggleHelpMenu (bool toggle) {
+		ShowMenu (_helpMenu, toggle);
+	}
+	
+	public void Quit () {
+		Application.Quit ();
 	}
 }

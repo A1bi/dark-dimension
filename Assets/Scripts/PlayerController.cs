@@ -72,7 +72,10 @@ public class PlayerController : MonoBehaviour
 
 	void OnTriggerEnter (Collider other) {
 		if (other.tag == "Asteroid") {
-			TakeDamage(_asteroidDamage);
+			TakeDamage (_asteroidDamage);
+
+		} else if (other.tag == "Planet") {
+			TakeDamage(_planetDamage);
 
 		} else if (other.tag == "Checkpoint") {
 			ChangeBoost(_checkpointBoostIncrease);
