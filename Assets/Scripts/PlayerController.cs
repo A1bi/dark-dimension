@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,6 +28,7 @@ public class PlayerController : MonoBehaviour
 	public GameObject _turbine;
 	public int _asteroidDamage = 25;
 	public int _planetDamage = 100;
+	public AudioClip _damageSound;
 	[Header("UI")]
 	public Slider _boostSlider;
 	public Slider _healthSlider;
@@ -40,12 +41,18 @@ public class PlayerController : MonoBehaviour
 	private float _previousSpeed = -1;
 	private float _targetSpeed;
 	private float _speedEasingStep = 1f;
-	private Func<float, float> _speedEasing;
+	private System.Func<float, float> _speedEasing;
 	private float _nextShot;
+	private Vector3 _initialPosition;
+	private Quaternion _initialRotation;
+	private Vector3 _initialVelocity;
 
 	void Start () {
 		_rigidbody = GetComponent<Rigidbody> ();
 		_gameController = GameObject.FindGameObjectWithTag ("GameController").GetComponent<GameController> ();
+		_initialPosition = transform.position;
+		_initialRotation = transform.rotation;
+		_initialVelocity = _rigidbody.angularVelocity;
 	}
 
 	void Update () {
@@ -55,6 +62,9 @@ public class PlayerController : MonoBehaviour
 		if (Input.GetButton ("Fire1") && Time.time > _nextShot) {
 			_nextShot = Time.time + 1 / _shotsPerSecond;
 			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
+
+			AudioClip clip = _shotSounds[Random.Range(0, _shotSounds.Length)];
+			PlaySound(clip);
 		}
 
 		UpdateSlider (_boostSlider, _boost);
@@ -75,10 +85,11 @@ public class PlayerController : MonoBehaviour
 			TakeDamage (_asteroidDamage);
 
 		} else if (other.tag == "Planet") {
-			TakeDamage(_planetDamage);
+			TakeDamage (_planetDamage);
 
 		} else if (other.tag == "Checkpoint") {
-			ChangeBoost(_checkpointBoostIncrease);
+			ChangeBoost (_checkpointBoostIncrease);
+			_gameController.PlayerHitCheckpoint ();
 		
 		} else if (other.tag == "Finish") {
 			_gameController.PlayerHitFinish ();
@@ -86,9 +97,12 @@ public class PlayerController : MonoBehaviour
 	}
 
 	public void Reset() {
-		gameObject.SetActive(true);
+		gameObject.SetActive (true);
 		_boost = _initialBoostAmount;
 		_health = 100;
+		transform.position = _initialPosition;
+		transform.rotation = _initialRotation;
+		_rigidbody.angularVelocity = _initialVelocity;
 	}
 
 	void UpdateSpeed() {
@@ -169,8 +183,10 @@ public class PlayerController : MonoBehaviour
 
 		if (_gameController._inGame && _health <= 0) {
 			Instantiate (_explosion, transform.position, transform.rotation);
-			gameObject.SetActive(false);
-			_gameController.PlayerDied();
+			gameObject.SetActive (false);
+			_gameController.PlayerDied ();
+		} else {
+			PlaySound(_damageSound);
 		}
 	}
 
@@ -182,6 +198,12 @@ public class PlayerController : MonoBehaviour
 		slider.value = Mathf.Lerp (slider.value, value, Time.deltaTime * 3.0f);
 	}
 
+	void PlaySound (AudioClip clip) {
+		AudioSource source = GetComponent<AudioSource> ();
+		source.clip = clip;
+		source.Play();
+	}
+	
 	float getConstrainedAngle(float angle, float constraint) {
 		float normalized = getNormalizedAngle(angle);
 		if (normalized > constraint) {

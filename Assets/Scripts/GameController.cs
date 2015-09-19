@@ -20,6 +20,7 @@ public class GameController : MonoBehaviour {
 	public float _minCheckpointSize;
 	public float _maxCheckpointSize;
 	public int _numberOfCheckpoints;
+	public AudioClip _checkpointSound;
 	[Header("Spawning")]
 	public float _spawnDistance;
 	public float _horizontalSpawnRange;
@@ -28,12 +29,15 @@ public class GameController : MonoBehaviour {
 	public GameObject[] _cameras;
 	public GameObject _finish;
 	public float _finishDistance;
+	public AudioClip _finishSound;
 	[Header("UI")]
 	public Text _timeText;
 	public GameObject _mainMenu;
 	public GameObject _helpMenu;
 	public GameObject _inGameMenu;
 	public GameObject _pauseMenu;
+	public GameObject _endMenu;
+	public AudioClip _startSound;
 	[HideInInspector]
 	public bool _inGame = false;
 
@@ -48,7 +52,7 @@ public class GameController : MonoBehaviour {
 	void Start () {
 		_checkpointDistance = _finishDistance / _numberOfCheckpoints;
 
-		GameObject[] menus = { _mainMenu, _helpMenu, _inGameMenu, _pauseMenu };
+		GameObject[] menus = { _mainMenu, _helpMenu, _inGameMenu, _pauseMenu, _endMenu };
 		foreach (GameObject menu in menus) {
 			menu.SetActive (true);
 		}
@@ -67,8 +71,12 @@ public class GameController : MonoBehaviour {
 			}
 
 			_time += Time.deltaTime;
-			System.TimeSpan time = System.TimeSpan.FromSeconds(_time);
-			_timeText.text = System.String.Format("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
+			System.TimeSpan time = System.TimeSpan.FromSeconds (_time);
+			_timeText.text = System.String.Format ("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
+		} else {
+			if (Input.GetButtonUp ("Cancel")) {
+				TogglePauseMenu (false);
+			}
 		}
 	}
 
@@ -82,10 +90,12 @@ public class GameController : MonoBehaviour {
 	public void StartGame () {
 		_inGame = true;
 		_time = 0;
+		_lastPlanetZ = _lastAsteroidZ = _lastCheckpointZ = 0;
 		_player.GetComponent<PlayerController> ().Reset ();
 
 		ShowMenu (_mainMenu, false);
 		ShowMenu (_inGameMenu, true);
+		PlaySound (_startSound);
 	}
 
 	public void RestartGame () {
@@ -99,6 +109,7 @@ public class GameController : MonoBehaviour {
 
 		StartGame ();
 		TogglePauseMenu (false);
+		ShowMenu (_endMenu, false);
 	}
 
 	void StopGame () {
@@ -202,12 +213,25 @@ public class GameController : MonoBehaviour {
 		menu.GetComponent<Animator> ().SetBool("visible", toggle);
 	}
 
+	void PlaySound (AudioClip clip) {
+		AudioSource source = GetComponent<AudioSource> ();
+		source.clip = clip;
+		source.Play();
+	}
+
 	public void PlayerDied () {
 		StopGame ();
+		ShowMenu (_endMenu, true);
+	}
+
+	public void PlayerHitCheckpoint () {
+		PlaySound (_checkpointSound);
 	}
 
 	public void PlayerHitFinish () {
 		StopGame ();
+		PlaySound (_finishSound);
+		ShowMenu (_endMenu, true);
 	}
 
 	public void VolumeSettingChanged (float volume) {
@@ -221,7 +245,11 @@ public class GameController : MonoBehaviour {
 
 	public void TogglePauseMenu (bool toggle) {
 		Time.timeScale = toggle ? 0 : 1;
+		_inGame = !toggle;
 		ShowMenu (_pauseMenu, toggle);
+		if (!toggle) {
+			ToggleHelpMenu (false);
+		}
 	}
 
 	public void ToggleHelpMenu (bool toggle) {
