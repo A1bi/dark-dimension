@@ -11,6 +11,8 @@ public class PlayerController : MonoBehaviour
 	public float _initialBoostAmount = 50.0f;
 	public float _checkpointBoostIncrease = 30.0f;
 	public float _boostDecrease = 0.3f;
+	public float _boostIncrease = 0.05f;
+	public AudioClip _boostSound;
 	[Header("Rotation")]
 	public float _rotationSpeed = 150;
 	public int _maxRoll = 70;
@@ -18,7 +20,7 @@ public class PlayerController : MonoBehaviour
 	public int _maxYaw = 30;
 	public float _yawRatio = 0.3f;
 	public bool _yInverted = true;
-	[Header("Fire")]
+	[Header("Shooting")]
 	public GameObject _shot;
 	public Transform _shotSpawner;
 	public float _shotsPerSecond;
@@ -37,12 +39,14 @@ public class PlayerController : MonoBehaviour
 	private GameController _gameController;
 	private float _boost;
 	private float _health;
+	private bool _boostDemanded;
 	private float _currentSpeed;
 	private float _previousSpeed = -1;
 	private float _targetSpeed;
 	private float _speedEasingStep = 1f;
 	private System.Func<float, float> _speedEasing;
 	private float _nextShot;
+	private bool _shootingDemanded;
 	private Vector3 _initialPosition;
 	private Quaternion _initialRotation;
 	private Vector3 _initialVelocity;
@@ -59,10 +63,10 @@ public class PlayerController : MonoBehaviour
 		if (!_gameController._inGame)
 			return;
 
-		if (Input.GetButton ("Fire1") && Time.time > _nextShot) {
+		if ((_shootingDemanded || Input.GetButton ("Fire1")) && Time.time > _nextShot) {
 			_nextShot = Time.time + 1 / _shotsPerSecond;
 			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
-
+			
 			AudioClip clip = _shotSounds[Random.Range(0, _shotSounds.Length)];
 			PlaySound(clip);
 		}
@@ -99,30 +103,47 @@ public class PlayerController : MonoBehaviour
 	public void Reset() {
 		gameObject.SetActive (true);
 		_boost = _initialBoostAmount;
+		_boostDemanded = false;
+		_currentSpeed = _targetSpeed = _normalSpeed;
 		_health = 100;
 		transform.position = _initialPosition;
 		transform.rotation = _initialRotation;
 		_rigidbody.angularVelocity = _initialVelocity;
 	}
 
+	public void DemandBoost (bool toggle) {
+		_boostDemanded = toggle;
+	}
+
+	public void DemandShooting (bool toggle) {
+		_shootingDemanded = toggle;
+	}
+
 	void UpdateSpeed() {
-		if (_targetSpeed > _normalSpeed) {
+		bool boostDemanded = _boostDemanded || Input.GetButton("Boost");
+		bool boosting = _targetSpeed > _normalSpeed;
+		bool boostStarting = !boosting && boostDemanded;
+		bool boostEnding = (boosting && !boostDemanded) || _boost <= 0;
+
+		if (boosting) {
 			ChangeBoost (-_boostDecrease);
+		} else {
+			ChangeBoost (_boostIncrease);
 		}
 
-		if (Input.GetButtonDown("Boost") && _boost > 0) {
+		if (boostStarting && _boost > 15) {
 			float boostSpeed = _normalSpeed * _boostFactor;
-			changeSpeed(boostSpeed);
+			changeSpeed (boostSpeed);
 			_speedEasing = easeIn;
+			PlaySound (_boostSound);
 		}
 
-		bool endBoost = Input.GetButtonUp ("Boost") || _boost <= 0;
-		if (endBoost || _previousSpeed < 0) {
+		if (boostEnding || _previousSpeed < 0) {
 			changeSpeed(_normalSpeed);
 			_speedEasing = easeOut;
 		}
 		
-		if (endBoost || Input.GetButtonUp("Boost")) {
+		if (boostEnding) {
 			_speedEasingStep = 0f;
 		}
 		
@@ -153,8 +174,17 @@ public class PlayerController : MonoBehaviour
 	}
 
 	void UpdateRotation() {
-		float roll = Input.GetAxis("Horizontal") * Time.deltaTime * _rotationSpeed;
-		float pitch = Input.GetAxis("Vertical") * Time.deltaTime * _rotationSpeed;
+		float hAxis, vAxis;
+		if (SystemInfo.supportsAccelerometer) {
+			hAxis = Mathf.Max (Mathf.Min (Input.acceleration.x * 3.0f, 1), -1) * _rotationSpeed * 0.6f;
+			vAxis = Mathf.Max (Mathf.Min (Input.acceleration.y / 2.0f + 0.35f, 1), -1)  * -_rotationSpeed * 1.2f;
+		} else {
+			hAxis = Input.GetAxis("Horizontal") * _rotationSpeed;
+			vAxis = Input.GetAxis("Vertical") * _rotationSpeed;
+		}
+
+		float roll = hAxis * Time.deltaTime;
+		float pitch = vAxis * Time.deltaTime;
 		if (!_yInverted) {
 			pitch *= -1;
 		}

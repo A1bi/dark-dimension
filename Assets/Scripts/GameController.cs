@@ -35,6 +35,7 @@ public class GameController : MonoBehaviour {
 	public GameObject _mainMenu;
 	public GameObject _helpMenu;
 	public GameObject _inGameMenu;
+	public GameObject _inGameTouchMenu;
 	public GameObject _pauseMenu;
 	public GameObject _endMenu;
 	public AudioClip _startSound;
@@ -57,8 +58,10 @@ public class GameController : MonoBehaviour {
 			menu.SetActive (true);
 		}
 
+		_inGameTouchMenu.SetActive (SystemInfo.supportsAccelerometer);
+
 		SwitchCamera ();
-		ShowMenu (_mainMenu, true);
+		ToggleMenu (_mainMenu, true);
 	}
 
 	void Update () {
@@ -71,8 +74,7 @@ public class GameController : MonoBehaviour {
 			}
 
 			_time += Time.deltaTime;
-			System.TimeSpan time = System.TimeSpan.FromSeconds (_time);
-			_timeText.text = System.String.Format ("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
+			_timeText.text = GetTimeString ();
 		} else {
 			if (Input.GetButtonUp ("Cancel")) {
 				TogglePauseMenu (false);
@@ -81,10 +83,12 @@ public class GameController : MonoBehaviour {
 	}
 
 	void LateUpdate () {
-		SpawnAsteroid ();
-		SpawnPlanet ();
-		SpawnCheckpoint ();
-		SpawnFinish ();
+		if (_inGame) {
+			SpawnAsteroid ();
+			SpawnPlanet ();
+			SpawnCheckpoint ();
+			SpawnFinish ();
+		}
 	}
 
 	public void StartGame () {
@@ -93,8 +97,8 @@ public class GameController : MonoBehaviour {
 		_lastPlanetZ = _lastAsteroidZ = _lastCheckpointZ = 0;
 		_player.GetComponent<PlayerController> ().Reset ();
 
-		ShowMenu (_mainMenu, false);
-		ShowMenu (_inGameMenu, true);
+		ToggleMenu (_mainMenu, false);
+		ToggleMenu (_inGameMenu, true);
 		PlaySound (_startSound);
 	}
 
@@ -109,15 +113,28 @@ public class GameController : MonoBehaviour {
 
 		StartGame ();
 		TogglePauseMenu (false);
-		ShowMenu (_endMenu, false);
+		ToggleMenu (_endMenu, false);
 	}
 
-	void StopGame () {
+	void EndGame (bool success) {
 		_inGame = false;
 
 		if (_currentCameraIndex > 0) {
 			SwitchCamera ();
 		}
+
+		ToggleMenu (_inGameMenu, false);
+		ToggleMenu (_endMenu, true);
+
+		GameObject timeText = _endMenu.transform.Find ("Time Text").gameObject;
+		timeText.SetActive (success);
+		if (success) {
+			PlaySound (_finishSound);
+			timeText.GetComponent<Text>().text = "Deine Zeit: " + GetTimeString();
+		}
+
+		GameObject titleText = _endMenu.transform.Find ("Title").gameObject;
+		titleText.GetComponent<Text> ().text = success ? "Geschafft!" : "Game Over";
 	}
 
 	void SpawnAsteroid () {
@@ -144,14 +161,15 @@ public class GameController : MonoBehaviour {
 		
 		Vector3 playerPos = _player.transform.position;
 
+		float size = Random.Range(1, _maxPlanetSize);
+
 		int leftOrRight = (Random.value > 0.5) ? 1 : -1;
-		float posX = playerPos.x + _horizontalSpawnRange * leftOrRight;
+		float posX = playerPos.x + (_horizontalSpawnRange + size) * leftOrRight;
 		float posY = Random.Range(playerPos.y - _verticalSpawnRange, playerPos.y + _verticalSpawnRange);
 		float posZ = playerPos.z + _spawnDistance;
 		Vector3 position = new Vector3(posX, posY, posZ);
-		GameObject newPlanet = (GameObject)Instantiate(planet, position, Quaternion.identity);
 
-		float size = Random.Range(1, _maxPlanetSize);
+		GameObject newPlanet = (GameObject)Instantiate(planet, position, Quaternion.identity);
 		newPlanet.transform.localScale = new Vector3(size, size, size);
 
 		_lastPlanetZ = posZ;
@@ -209,7 +227,7 @@ public class GameController : MonoBehaviour {
 		}
 	}
 
-	void ShowMenu (GameObject menu, bool toggle) {
+	void ToggleMenu (GameObject menu, bool toggle) {
 		menu.GetComponent<Animator> ().SetBool("visible", toggle);
 	}
 
@@ -219,9 +237,13 @@ public class GameController : MonoBehaviour {
 		source.Play();
 	}
 
+	string GetTimeString () {
+		System.TimeSpan time = System.TimeSpan.FromSeconds (_time);
+		return System.String.Format ("{0:00}:{1:00}:{2:00}", time.Minutes, time.Seconds, time.Milliseconds / 10);
+	}
+
 	public void PlayerDied () {
-		StopGame ();
-		ShowMenu (_endMenu, true);
+		EndGame (false);
 	}
 
 	public void PlayerHitCheckpoint () {
@@ -229,9 +251,7 @@ public class GameController : MonoBehaviour {
 	}
 
 	public void PlayerHitFinish () {
-		StopGame ();
-		PlaySound (_finishSound);
-		ShowMenu (_endMenu, true);
+		EndGame (true);
 	}
 
 	public void VolumeSettingChanged (float volume) {
@@ -246,14 +266,14 @@ public class GameController : MonoBehaviour {
 	public void TogglePauseMenu (bool toggle) {
 		Time.timeScale = toggle ? 0 : 1;
 		_inGame = !toggle;
-		ShowMenu (_pauseMenu, toggle);
+		ToggleMenu (_pauseMenu, toggle);
 		if (!toggle) {
 			ToggleHelpMenu (false);
 		}
 	}
 
 	public void ToggleHelpMenu (bool toggle) {
-		ShowMenu (_helpMenu, toggle);
+		ToggleMenu (_helpMenu, toggle);
 	}
 	
 	public void Quit () {
