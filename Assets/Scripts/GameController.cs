@@ -35,7 +35,7 @@ public class GameController : MonoBehaviour {
 	public GameObject _mainMenu;
 	public GameObject _helpMenu;
 	public GameObject _inGameMenu;
-	public GameObject _inGameTouchMenu;
+	public GameObject _crosshairs;
 	public GameObject _pauseMenu;
 	public GameObject _endMenu;
 	public AudioClip _startSound;
@@ -58,7 +58,12 @@ public class GameController : MonoBehaviour {
 			menu.SetActive (true);
 		}
 
-		_inGameTouchMenu.SetActive (SystemInfo.supportsAccelerometer);
+		foreach (GameObject ui in GameObject.FindGameObjectsWithTag("Mobile")) {
+			ui.SetActive (SystemInfo.supportsAccelerometer);
+		}
+		foreach (GameObject ui in GameObject.FindGameObjectsWithTag("Desktop")) {
+			ui.SetActive (!SystemInfo.supportsAccelerometer);
+		}
 
 		SwitchCamera ();
 		ToggleMenu (_mainMenu, true);
@@ -75,6 +80,7 @@ public class GameController : MonoBehaviour {
 
 			_time += Time.deltaTime;
 			_timeText.text = GetTimeString ();
+
 		} else {
 			if (Input.GetButtonUp ("Cancel")) {
 				TogglePauseMenu (false);
@@ -225,6 +231,7 @@ public class GameController : MonoBehaviour {
 		for (int i = 0; i < _cameras.Length; i++) {
 			_cameras[i].SetActive(i == _currentCameraIndex);
 		}
+		_crosshairs.SetActive (_currentCameraIndex == _cameras.Length - 1);
 	}
 
 	void ToggleMenu (GameObject menu, bool toggle) {
@@ -275,7 +282,7 @@ public class GameController : MonoBehaviour {
 	public void ToggleHelpMenu (bool toggle) {
 		ToggleMenu (_helpMenu, toggle);
 	}
-	
+
 	public void Quit () {
 		Application.Quit ();
 	}

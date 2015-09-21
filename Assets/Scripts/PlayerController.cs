@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
+	enum Weapon { Normal, AutoTarget };
+
 	[Header("Speed")]
 	public int _normalSpeed = 1000;
 	public float _boostFactor = 4;
@@ -34,6 +36,7 @@ public class PlayerController : MonoBehaviour
 	[Header("UI")]
 	public Slider _boostSlider;
 	public Slider _healthSlider;
+	public GameObject _weaponText;
 
 	private Rigidbody _rigidbody;
 	private GameController _gameController;
@@ -47,6 +50,7 @@ public class PlayerController : MonoBehaviour
 	private System.Func<float, float> _speedEasing;
 	private float _nextShot;
 	private bool _shootingDemanded;
+	private Weapon _currentWeapon = Weapon.AutoTarget;
 	private Vector3 _initialPosition;
 	private Quaternion _initialRotation;
 	private Vector3 _initialVelocity;
@@ -57,6 +61,8 @@ public class PlayerController : MonoBehaviour
 		_initialPosition = transform.position;
 		_initialRotation = transform.rotation;
 		_initialVelocity = _rigidbody.angularVelocity;
+
+		SwitchWeapon ();
 	}
 
 	void Update () {
@@ -64,11 +70,11 @@ public class PlayerController : MonoBehaviour
 			return;
 
 		if ((_shootingDemanded || Input.GetButton ("Fire1")) && Time.time > _nextShot) {
-			_nextShot = Time.time + 1 / _shotsPerSecond;
-			Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
-			
-			AudioClip clip = _shotSounds[Random.Range(0, _shotSounds.Length)];
-			PlaySound(clip);
+			Shoot ();
+		}
+
+		if (Input.GetButtonUp ("Weapon")) {
+			SwitchWeapon ();
 		}
 
 		UpdateSlider (_boostSlider, _boost);
@@ -117,6 +123,16 @@ public class PlayerController : MonoBehaviour
 
 	public void DemandShooting (bool toggle) {
 		_shootingDemanded = toggle;
+	}
+
+	void Shoot () {
+		_nextShot = Time.time + 1 / _shotsPerSecond;
+		GameObject shot = (GameObject)Instantiate(_shot, _shotSpawner.position, _shotSpawner.rotation);
+
+		shot.GetComponent<ShotController> ()._autoTarget = _currentWeapon == Weapon.AutoTarget;
+		
+		AudioClip clip = _shotSounds[Random.Range(0, _shotSounds.Length)];
+		PlaySound(clip);
 	}
 
 	void UpdateSpeed() {
@@ -222,6 +238,22 @@ public class PlayerController : MonoBehaviour
 
 	void ChangeBoost(float amount) {
 		_boost += amount;
+	}
+
+	public void SwitchWeapon () {
+		_currentWeapon = (Weapon)((int)++_currentWeapon % System.Enum.GetNames(typeof(Weapon)).Length);
+		
+		string name = "";
+		switch (_currentWeapon) {
+		case Weapon.Normal:
+			name = "Normalschuss";
+			break;
+		case Weapon.AutoTarget:
+			name = "Zielsuchend";
+			break;
+		}
+		
+		_weaponText.GetComponent<Text>().text = name;
 	}
 
 	void UpdateSlider(Slider slider, float value) {

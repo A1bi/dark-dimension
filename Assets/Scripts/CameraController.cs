@@ -9,7 +9,7 @@ public class CameraController : MonoBehaviour {
 	private Vector3 _distance;
 	private GameController _gameController; 
 		
-	void Start () {
+	void Awake () {
 		_distance = transform.position - _player.transform.position;
 		_gameController = GameObject.FindGameObjectWithTag ("GameController").GetComponent<GameController> ();
 	}
